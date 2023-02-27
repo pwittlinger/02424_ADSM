@@ -8,6 +8,9 @@ library(ggplot2)
 dioxin<-read.csv("../01_Assignment1/dioxin.csv",header=T)
 names(dioxin)
 
+plot(dioxin$DIOX)
+dioxin$DIOX
+
 # Transforming the variables into factors
 dioxin <- mutate_if(dioxin, is.character, as.factor)
 
