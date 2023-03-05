@@ -197,6 +197,52 @@ m8 <-step(model2.red, ~(PLANT+TIME+LAB+O2COR+NEFFEKT+QRAT)^2, direction="forward
 
 model2.red
 
-step(m8, ~.(+QROEG+TOVN+TROEG+POVN+CO2+CO+SO2+HCL+H2O), direction="forward")
+step(m8, ~.(QROEG+TOVN+TROEG+POVN+CO2+CO+SO2+HCL+H2O), direction="forward")
 
-summary(m8)
+m8_g<- step(m8, ~((PLANT+TIME+LAB+O2COR+NEFFEKT+QRAT)^2
+            +QROEG+TOVN+TROEG+POVN+CO2+CO+SO2+HCL+H2O), direction="both")
+
+summary(m8_g)
+Anova(m8_g, type="II")
+
+
+
+par(mfrow=c(2,2))
+plot(m8_g)
+dev.off()
+
+###
+# Estimating the variances between the two labs
+
+kklab <- dioxin %>% filter(LAB == "KK")
+var(log(kklab$DIOX))
+uslab <- dioxin %>% filter(LAB == "USA")
+
+#w_ <- rep(1/var(log(kklab$DIOX)),57)
+w_ <- rep(1,57)
+w_[which(dioxin$LAB=="USA")] <- 1/var(log(uslab$DIOX)) 
+w_
+1/var(log(uslab$DIOX))
+
+
+w8 <- lm(log(DIOX) ~ PLANT + TIME + LAB + O2COR + NEFFEKT + QRAT + PLANT:QRAT + 
+     TIME:NEFFEKT, data=dioxin, weights=w_)
+
+summary(w8)
+par(mfrow=c(2,2))
+plot(w8)
+summary(m8_g)
+
+
+##########
+# Using boxcox transformed data for the same analysis as up above
+
+model2.red_bc <- lm(trans ~ (PLANT+TIME+LAB+O2COR+NEFFEKT), data=dioxin)
+m8bc <-step(model2.red_bc, ~(PLANT+TIME+LAB+O2COR+NEFFEKT+QRAT)^2, direction="forward")
+m8bc_g <- step(m8bc, ~((PLANT+TIME+LAB+O2COR+NEFFEKT+QRAT)^2
+           +QROEG+TOVN+TROEG+POVN+CO2+CO+SO2+HCL+H2O), direction="both")
+summary(m8bc_g)
+summary(m8bc)
+Anova(m8bc, type="II")
+
+plot(m8bc)
