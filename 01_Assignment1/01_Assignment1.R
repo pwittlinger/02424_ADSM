@@ -1,34 +1,50 @@
 #install.packages("ggfortify")
 #install.packages("ggplot2")
 #install.packages("GGally")
+#install.packages("Hmisc")
 library(dplyr)
 library(ggplot2)
 #library(GGally)
 library(MASS)
 library(car)
+library(Hmisc)
 
 library(ggfortify)
 ### Assignment1
 # Reading in the data
 dioxin<-read.csv("../01_Assignment1/dioxin.csv",header=T)
 names(dioxin)
+describe(dioxin$DIOX)
+mean(dioxin$DIOX)
+
 
 # Looking at the raw dependent variable
 # we can see that there are quite some outliers
-plot(dioxin$DIOX)
+png(filename = "dioxin.png")
+par(mfrow=c(1,2))
+plot(dioxin$DIOX, main = "Dioxin in Original Domain", ylab="Dioxin", xlab="Observation")
+hist(dioxin$DIOX, main="Distribution of Dioxin levels (original domain)")
+dev.off()
+
 
 # still not normally distributed
 # both difference in mean + difference in variance
-plot(log(dioxin$DIOX))
+plot(log(dioxin$DIOX), main="Dioxin in log Domain", ylab="log(Dioxin)", xlab ="Observation")
+
+dev.off()
 
 # looking at distribution
 par(mfrow=c(1,2))
 hist(dioxin$DIOX)
 hist(log(dioxin$DIOX))
 
+# Due to the fact that the confidence interval includeds the regular log-transform
+# we opt to use that as our initial transformation.
+# Otherwise we would go for the optimal lambda value (-.18)
+png(filename="boxcox_transformation.png")
 lambda_ <- boxcox(dioxin$DIOX ~ 1)
 l <- lambda_$x[which.max(lambda_$y)]
-
+dev.off()
 
 
 y2 = (dioxin$DIOX^l-1)/l
@@ -233,6 +249,9 @@ par(mfrow=c(2,2))
 plot(w8)
 summary(m8_g)
 
+w8$coefficients
+
+confint(w8, level=.95)
 
 ##########
 # Using boxcox transformed data for the same analysis as up above
