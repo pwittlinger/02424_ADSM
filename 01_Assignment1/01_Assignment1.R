@@ -2,6 +2,7 @@
 #install.packages("ggplot2")
 #install.packages("GGally")
 #install.packages("Hmisc")
+#install.packages("nlme")
 library(dplyr)
 library(ggplot2)
 #library(GGally)
@@ -88,6 +89,7 @@ Anova(model1.1, type="II")
 Anova(model1, type="II")
 
 # Plotting model fits
+# Residual analysis
 #autoplot(model1)
 png(filename = "q2_full_untransformed.png")
 par(mfrow=c(2,2))
@@ -116,23 +118,34 @@ plot(model1.bc)
 Anova(model1.log, type="II")
 
 
-####
+########
+# Reduce the model if possible
 
-# Using only intercept to specify
+# Using only intercept to specify for forward selection
 step(lm(DIOX~1, data=dioxin), ~PLANT+TIME+LAB+OXYGEN+LOAD+PRSEK, direction="forward")
+# Fully specified model with backwards selection
 step(lm(DIOX~1+PLANT+TIME+LAB+OXYGEN+LOAD+PRSEK, data=dioxin), direction="back")
 
 # transformed model
+# First Forward selection
 step(lm(log(DIOX)~1, data=dioxin), ~PLANT+TIME+LAB+OXYGEN+LOAD+PRSEK, direction="forward")
+# Then backward selection
+## Error when using step, so we make use of drop1
 #step(lm(log(DIOX)~PLANT+TIME+LAB+OXYGEN+LOAD+PRSEK, data=dioxin), direction="backward")
+
 drop1(lm(log(DIOX)~PLANT+TIME+LAB+OXYGEN+LOAD+PRSEK, data=dioxin))
 drop1(lm(log(DIOX)~PLANT+TIME+LAB+OXYGEN+LOAD, data=dioxin))
-# we get rid of factor PRSEK. Looking at the type II anova, we can see that it's the only variable with a p-value below the significance level of 5%
 
+# we get rid of factor PRSEK. Looking at the type II anova,
+#we can see that it's the only variable with a p-value below the significance level of 5%
+
+# Fitting the final model explicitly
 model1.red <- lm(log(DIOX)~PLANT+TIME+LAB+OXYGEN+LOAD, data=dioxin)
 
 summary(model1.red)
 
+
+#######
 ## Q3 - Simple additive model, but with numerical values
 ### 
 
@@ -145,7 +158,7 @@ dev.off()
 
 Anova(model2.log, type="II")
 
-
+## Box cox transformed model
 #model2.bc <- lm(trans ~ (PLANT+TIME+LAB+O2COR+NEFFEKT+QRAT), data=dioxin)
 #summary(model2.bc)
 #par(mfrow=c(2,2))
@@ -231,11 +244,17 @@ dev.off()
 # Estimating the variances between the two labs
 
 kklab <- dioxin %>% filter(LAB == "KK")
+count(kklab)
 var(log(kklab$DIOX))
 uslab <- dioxin %>% filter(LAB == "USA")
+count(uslab)
+var(log(uslab$DIOX))
+#log(var(uslab$DIOX))
 
-#w_ <- rep(1/var(log(kklab$DIOX)),57)
-w_ <- rep(1,57)
+
+# Inverse variance weighting
+w_ <- rep(1/var(log(kklab$DIOX)),57)
+#w_ <- rep(1,57)
 w_[which(dioxin$LAB=="USA")] <- 1/var(log(uslab$DIOX)) 
 w_
 1/var(log(uslab$DIOX))
