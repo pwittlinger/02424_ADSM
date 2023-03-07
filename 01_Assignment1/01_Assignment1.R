@@ -9,6 +9,7 @@ library(ggplot2)
 library(MASS)
 library(car)
 library(Hmisc)
+library(knitr)
 
 library(ggfortify)
 ### Assignment1
@@ -170,8 +171,19 @@ step(lm(log(DIOX)~1, data=dioxin), ~PLANT+TIME+LAB+O2COR+NEFFEKT+QRAT, direction
 step(lm(log(DIOX)~PLANT+TIME+LAB+O2COR+NEFFEKT+QRAT, data=dioxin),direction="backward")
 # AIC tends to overfit on the models when you have small sample sizes.
 # Therefore, we go with the output of the ANOVA and drop the term QRAT
+
 model2.red <- lm(log(DIOX) ~ (PLANT+TIME+LAB+O2COR+NEFFEKT), data=dioxin)
 summary(model2.red)
+knitr::kable(Anova(model2.red, type="II"), "latex")
+
+##
+model2.red$coefficients %>% knitr::kable(latex)
+
+knitr::kable(model2.red$coefficients, "latex")
+
+
+
+
 
 # Q4 - predict on the datapoint
 #n <- data.frame(PLANT = c(2), TIME = c(1), LAB = c(1), O2COR = c(0.5), NEFFEKT = c(-0.01))
