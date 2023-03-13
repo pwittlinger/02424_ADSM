@@ -16,13 +16,16 @@ library(ggfortify)
 # Reading in the data
 dioxin<-read.csv("../01_Assignment1/dioxin.csv",header=T)
 names(dioxin)
+# first step -> descriptive analytics of the dependent variable
 describe(dioxin$DIOX)
+sd(dioxin$DIOX)
 mean(dioxin$DIOX)
+# the data is quite spread out
 
 
 # Looking at the raw dependent variable
 # we can see that there are quite some outliers
-png(filename = "dioxin.png")
+png(filename = "dioxin.png", width = 9600, height = 4800, units="px", res=600)
 par(mfrow=c(1,2))
 plot(dioxin$DIOX, main = "Dioxin in Original Domain", ylab="Dioxin", xlab="Observation")
 hist(dioxin$DIOX, main="Distribution of Dioxin levels (original domain)")
@@ -32,12 +35,6 @@ dev.off()
 # still not normally distributed
 # both difference in mean + difference in variance
 plot(log(dioxin$DIOX), main="Dioxin in log Domain", ylab="log(Dioxin)", xlab ="Observation")
-
-dev.off()
-
-# looking at distribution
-par(mfrow=c(1,2))
-hist(dioxin$DIOX)
 hist(log(dioxin$DIOX))
 
 # Due to the fact that the confidence interval includeds the regular log-transform
@@ -177,7 +174,8 @@ summary(model2.red)
 knitr::kable(Anova(model2.red, type="II"), "latex")
 
 ##
-model2.red$coefficients %>% knitr::kable(latex)
+#model2.red$coefficients %>% knitr::kable(latex)
+model2.red
 
 knitr::kable(model2.red$coefficients, "latex")
 
@@ -191,6 +189,9 @@ n <- data.frame(PLANT = c("RENO_N"), TIME = c("1"),
                 LAB = c("KK"), O2COR = c(0.5), NEFFEKT = c(-0.01))
 pn <- predict(model2.red, n, interval="prediction", level=.95)
 
+dioxin$PLANT
+dioxin$TIME
+pn
 exp(pn)
 
 ## Does the dioxin emission depend on the active variables
@@ -217,6 +218,10 @@ Anova(model7, type="II")
 m7 <- (fit.back <- step(model7, direction="back"))
 summary(m7)
 
+par(mfrow=c(2,2))
+plot(m7)
+dev.off()
+
 
 #summary(step(lm(log(DIOX)~1, data=dioxin), ~PLANT*TIME*LAB*O2COR*NEFFEKT*QRAT, direction="forward"))
 summary(step(lm(log(DIOX)~1, data=dioxin), ~(PLANT+TIME+LAB+O2COR+NEFFEKT+QRAT)^2, direction="forward"))
@@ -229,7 +234,8 @@ summary(model7.full)
 
 summary(step(model7.full, direction="backward"))
 
-summary(step(lm(log(DIOX)~(PLANT+TIME+LAB+O2COR+NEFFEKT+QRAT)^2, data=dioxin), ~(QROEG+TOVN+TROEG+POVN+CO2+CO+SO2+HCL+H2O), direction="forward"))
+
+#summary(step(lm(log(DIOX)~(PLANT+TIME+LAB+O2COR+NEFFEKT+QRAT)^2, data=dioxin), ~(QROEG+TOVN+TROEG+POVN+CO2+CO+SO2+HCL+H2O), direction="forward"))
 
 
 summary(step(model2.red, ~(PLANT+TIME+LAB+O2COR+NEFFEKT+QRAT)^2, direction="forward"))
@@ -246,8 +252,13 @@ m8_g<- step(m8, ~((PLANT+TIME+LAB+O2COR+NEFFEKT+QRAT)^2
 summary(m8_g)
 Anova(m8_g, type="II")
 
+knitr::kable(Anova(m8_g, type="II"), "latex")
 
 
+
+
+#png(filename="final_model_residuals.png")
+png(filename = "final_model_residuals.png", width = 9600, height = 4800, units="px", res=600)
 par(mfrow=c(2,2))
 plot(m8_g)
 dev.off()
@@ -295,4 +306,7 @@ summary(m8bc_g)
 summary(m8bc)
 Anova(m8bc, type="II")
 
+png(filename = "final_model_boxcox.png", width = 9600, height = 4800, units="px", res=600)
+par(mfrow=c(2,2))
 plot(m8bc)
+dev.off()
