@@ -127,9 +127,9 @@ anova(glm.0, glm.2, test="F")
 ##############
 #
 
-glm.0$residuals %>% dplyr::select
+#glm.0$residuals %>% dplyr::select
 
-df$sex %>% dplyr::select(0)
+#df$sex %>% dplyr::select(0)
 
 resdat <- cbind(glm.0$residuals, df$sex)
 colnames(resdat) <- c("residuals", "sex")
@@ -164,6 +164,7 @@ plot(glm.0subj)
 
 anova(glm.0subj,glm.2subj, test="F")
 
+
 glm.2subj$residuals
 
 df_res <- df2
@@ -174,6 +175,36 @@ df_res$time <- data$time
 
 df_res %>% dplyr::group_by(subjId,day) %>% dplyr::arrange(subjId, day, time)
 dev.off()
+
+
+grouped_df <- df_res %>% dplyr::group_by(subjId,day) %>% summarise(value_list = list(residuals))
+
+grouped_df$value_list[2]
+
+#install.packages("purrr")
+
+library(purrr)
+
+length(grouped_df$value_list)
+sapply(grouped_df$value_list, length)
+
+filtered_df <- grouped_df %>% filter(length(value_list)>2)
+
+corr_df <- filtered_df %>% 
+  mutate(corr = map2_dbl(array(unlist(value_list))[-1], (unlist(value_list))[-length(unlist(value_list))], ~ cor(.x, .y)))
+
+#corr_df <- filtered_df %>% 
+#  mutate(corr = map2_dbl(slice(unlist(value_list), -length(value_list)), slice(unlist(value_list),-1)), ~ cor(.x, .y))
+
+filtered_df %>% sapply(cor(array(unlist(value_list))[-1], (unlist(value_list))[-length(unlist(value_list))]))
+
+
+
+#vl <- filtered_df$value_list[1]
+
+cor(unlist(vl)[-1],unlist(vl)[-length(unlist(vl))])
+array(unlist(vl))[-1]
+
 
 df_res$residuals[0:6]
 
@@ -188,5 +219,21 @@ acf(df_res$residuals[0:6],6)
 #dev.off()
 
 
+df3 <- df2
+df3$sex <- df1$sex
 
+
+model <- glm(clo~poly(tOut,2)*subjId*poly(tInOp,2),
+             family=Gamma(link="log"), data=df3, weights = rep(1,length(df3$sex)), dispersion=c(NA, NA))
+
+# estimate the dispersion parameters via maximum likelihood
+model <- glm(y ~ x + class, data = df, family = Gamma(link = "log"), 
+             weights = 1/model$fitted.values^2, start = coef(model))
+
+# print the model summary
+summary(model)
+
+
+
+rep(1,length(df3$sex))
 
