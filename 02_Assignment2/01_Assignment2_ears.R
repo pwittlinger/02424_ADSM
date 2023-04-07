@@ -15,22 +15,38 @@ names(data)
 
 data <- mutate_if(data, is.character, as.factor)
 
-fit1 <- glm(infections ~ swimmer + location + age + sex, family = poisson, data = data)
-fit1.offset<-glm(infections ~ offset(log(persons)) + swimmer + location + age + sex, family = poisson(link="log"), data = data)
-summary(fit1)
-
 hist(data$infections)
+mean(data$persons)
+var(data$persons)
+min(data$persons)
+max(data$persons)
 
-#summary(glm(infections ~ swimmer + location + age + sex+log(persons), family = poisson, data = data))
+########################
+# First we fit a simple model
+fit1 <- glm(infections ~ swimmer + location + age + sex, family = poisson, data = data)
+summary(fit1)
+# Almost all parameters are significant
+
+# Now we look at the same model using an offset.
+# 
+#fit1.offset<-glm(infections ~ offset(log(persons)) + swimmer + location + age + sex, family = poisson(link="log"), data = data)
+
+fit1.offset<-glm(infections ~ offset(log(persons)) + (swimmer + location + age + sex)^2, family = poisson(link="log"), data = data)
+
 summary(fit1.offset)
 anova(fit1.offset, test="Chisq")
 Anova(fit1.offset, type="III")
 
 # Goodness of fit
-pchisq(fit1.offset$deviance, fit1.offset$df.residual)
-pchisq(fit1.offset$null.deviance, fit1.offset$df.null)
-anova(glm(infections ~ offset(log(persons))+1, family = poisson, data = data),fit1.offset, test="Chisq")
-summary(glm(infections ~ offset(log(persons))+1, family = poisson, data = data))
+H_0 <- glm(infections ~ offset(log(persons))+1, family = poisson, data = data)
+summary(H_0)
+
+1-pchisq(fit1.offset$deviance, fit1.offset$df.residual)
+1-pchisq(fit1.offset$null.deviance, fit1.offset$df.null)
+anova(H_0,fit1.offset, test="Chisq")
+
+
+
 
 drop1(fit1.offset, test="Chisq")
 fit1.offred <- step(fit1.offset)
@@ -41,7 +57,7 @@ plot(fit1)
 plot(fit1.offset)
 
 anova(fit1.offset, (glm(infections ~ offset(log(persons)) + swimmer + location + sex, family = poisson, data = data)), test="Chisq")
-fit1.offloc <- glm(infections ~ offset(log(persons)) +location, family = poisson, data = data)
+fit1.offloc <- glm(infections ~ offset(log(persons)) +location*sex, family = poisson, data = data)
 summary(fit1.offloc)
 
 pchisq(fit1.offloc$deviance, fit1.offloc$df.residual)
@@ -50,10 +66,11 @@ anova(fit1.offloc,fit1.offset, test="Chisq")
 
 
 fit.qp <- (glm(infections ~ offset(log(persons)) + swimmer + location + age + sex, family = quasipoisson(link="log"), data = data))
+#fit.qp <- (glm(infections ~ offset(log(persons)) + (swimmer + location + age + sex)^2, family = quasipoisson(link="log"), data = data))
 summary(fit.qp)
 plot(fit.qp)
 
-fit.qps <- glm(infections ~ offset(log(persons))+ location, family = quasipoisson(link="log"), data = data)
+fit.qps <- glm(infections ~ offset(log(persons))+ location*sex, family = quasipoisson(link="log"), data = data)
 summary(fit.qps)
 anova(fit.qp,fit.qps, test="F")
 logLik(fit1.offset)
@@ -67,7 +84,7 @@ plot(fit.qp)
 # mean(data$infections)
 # var(data$infections)
 # 
-# mean(data$infections/data$persons)
+# log((data$infections/data$persons))
 # var(data$infections/data$persons)
 # sum(data$persons)
 # mean(data$infections/data$persons*mean(data$infections))
