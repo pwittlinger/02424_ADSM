@@ -35,7 +35,9 @@ fit1.offset<-glm(infections ~ offset(log(persons)) + (swimmer + location + age +
 
 summary(fit1.offset)
 anova(fit1.offset, test="Chisq")
+Anova(fit1.offset, type="II")
 Anova(fit1.offset, type="III")
+
 
 # Goodness of fit
 H_0 <- glm(infections ~ offset(log(persons))+1, family = poisson, data = data)
@@ -64,19 +66,43 @@ pchisq(fit1.offloc$deviance, fit1.offloc$df.residual)
 anova(glm(infections ~ offset(log(persons))+1, family = poisson, data = data),fit1.offloc, test="Chisq")
 anova(fit1.offloc,fit1.offset, test="Chisq")
 
+# Null hypothesis on quasi poisson
+fit.q0 <- glm(infections ~ offset(log(persons)), family = quasipoisson(link="log"), data = data)
+summary(fit.q0)
 
-fit.qp <- (glm(infections ~ offset(log(persons)) + swimmer + location + age + sex, family = quasipoisson(link="log"), data = data))
-#fit.qp <- (glm(infections ~ offset(log(persons)) + (swimmer + location + age + sex)^2, family = quasipoisson(link="log"), data = data))
+
+# Now a full model on the quasi poisson
+#fit.qp <- (glm(infections ~ offset(log(persons)) + swimmer + location + age + sex, family = quasipoisson(link="log"), data = data))
+fit.qp <- (glm(infections ~ offset(log(persons)) + (swimmer + location + age + sex)^2, family = quasipoisson(link="log"), data = data))
 summary(fit.qp)
+Anova(fit.qp, test="F", type="II")
+Anova(fit.qp, test="F", type="III")
+anova(fit.qp, test="F")
 plot(fit.qp)
+
+anova(fit.q0, fit.qp, test="F")
 
 fit.qps <- glm(infections ~ offset(log(persons))+ location*sex, family = quasipoisson(link="log"), data = data)
 summary(fit.qps)
 anova(fit.qp,fit.qps, test="F")
+anova(fit.q0, fit.qps, test="F")
+
+fit.qps <- glm(infections ~ offset(log(persons))+ location*sex+swimmer, family = quasipoisson(link="log"), data = data)
+
+Anova(fit.qps, type="II", test="F")
+Anova(fit.qps, type="III", test="F")
+anova(fit.qps, test="F")
+
 logLik(fit1.offset)
 
 logLik(fit.qps)
-plot(fit.qp)
+plot(fit.qps)
+
+fit_fin <- glm(infections ~ offset(log(persons))+ location*sex+swimmer, family = poisson(link="log"), data = data)
+summary(fit_fin)
+anova(fit_fin, test="Chisq")
+Anova(fit_fin, type="III")
+
 #summary(glm.nb(infections ~ offset(log(persons)) + swimmer + location + age + sex, data = data))
 
 
