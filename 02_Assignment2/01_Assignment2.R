@@ -3,6 +3,7 @@
 #install.packages("GGally")
 #install.packages("Hmisc")
 #install.packages("nlme")
+#install.packages("sjPlot")
 library(dplyr)
 library(ggplot2)
 #library(GGally)
@@ -58,13 +59,16 @@ lm.no <- lm(clo~tOut+tInOp+sex, data=df1)
 summary(lm.no)
 par(mfrow=c(2,2))
 plot(lm.no)
+AIC(lm.no)
 
+# Now fitting seconder order interactions between the variables
 lm.s2 <- lm(clo~(tOut+tInOp+sex)^2, data=df1)
 summary(lm.s2)
 anova(lm.no, lm.s2)
 plot(lm.s2)
+AIC(lm.s2)
 
-
+# Third oder interactions
 lm.1 <- lm(clo~(tOut+tInOp+sex)^3, data=df1)
 summary(lm.1)
 
@@ -74,6 +78,7 @@ plot(lm.1)
 logLik(lm.1)
 anova(lm.s2, lm.1)
 summary(lm.1)
+AIC(lm.1)
 
 # Even the fully specified model is quite poor at explaining the variation in the data
 
@@ -82,21 +87,34 @@ summary(lm.2)
 AIC(lm.2)
 anova(lm.1, lm.2)
 logLik(lm.2)
-
+plot(lm.2)
 # Backwards selection leads to the same model, meaning it already is the best model to choose
-#lm.2small <- step(lm.2)
-#summary(lm.2small)
+lm.2small <- step(lm.2)
+summary(lm.2small)
 
+
+
+png("gaussianpoly.png")
 par(mfrow=c(2,2))
 plot(lm.2)
 dev.off()
+anova(lm.2,lm.1)
 
-####
-#
 
+
+
+#######
+# GAMMA MODEL
+# Since even a quite extensive gaussian model is not sufficient we expand our research to other distributions
+mean(data$clo)
 glm.no <- glm(clo~(tOut+tInOp+sex), family = Gamma, data = df1)
 summary(glm.no)
+glm.no$coefficients
 plot(glm.no)
+# McFadden R-squared
+1-glm.no$deviance/glm.no$null.deviance
+AIC(glm.no)
+
 
 glm.0 <- glm(clo~(tOut+tInOp+sex)^2, family = Gamma(link = "inverse"), data = df1)
 summary(glm.0)
@@ -106,23 +124,60 @@ anova(glm.no, glm.0, test="F")
 anova(glm.0, test="F")
 AIC(glm.0)
 
-
 glm.1 <- glm(clo~(tOut+tInOp+sex)^3, family = Gamma, data = df1)
 summary(glm.1)
 plot(glm.1)
 logLik(glm.1)
+AIC(glm.1)
 
 anova(glm.0, glm.1, test="F")
 # Increasing the model order any further does not yield any significant improvement in explanatory power
 
-glm.2 <- glm(clo~poly(tOut,2)*sex*poly(tInOp,2),family=Gamma, data=df1)
+# Taking higher order polynomials 
+glm.2 <- glm(clo~poly(tOut,2)*sex*poly(tInOp,2),family=Gamma(link = "inverse"), data=df1)
 summary(glm.2)
+AIC(glm.2)
 logLik(glm.2)
 par(mfrow=c(2,2))
 plot(glm.2)
 
+plot(glm.2$coefficients, )
+summary(glm.2)
+ci_params <- confint(glm.2)
+
+# Plotting model parameters + their corresponding confidence interval
+library(sjPlot)
+png("model_paramsplot.png")
+plot_model(glm.2, vline.color = "red", transform=NULL)
+dev.off()
+
+knitr::kable(Anova(glm.2, type="II"), "latex", digits=2)
+
+knitr::kable(summary(glm.2)$coefficients, "latex", digits=2)
+
+1-glm.2$deviance/glm.2$null.deviance
+summary(glm.2)
+plot(glm.2$residuals)
+Anova(glm.2, type="II")
+
+dev.off()
+
+png("gammapoly.png")
+par(mfrow=c(2,2))
+plot(glm.2)
+dev.off()
+anova(lm.2,lm.1)
+
 anova(glm.0, glm.2, test="F")
 
+glm.3 <- glm(clo~poly(tOut,3)*sex*poly(tInOp,3),family=Gamma(link = "inverse"), data=df1)
+#summary(glm.2)
+#step(glm.2)
+#logLik(glm.2)
+#par(mfrow=c(2,2))
+#plot(glm.2)
+
+#anova(glm.3, glm.2, test="F")
 
 ##############
 #
@@ -151,14 +206,26 @@ var.test(unlist(var_m), unlist(var_f))
 # Fit the model now with subjectId instead of 
 
 df2 <- dplyr::select(data,c("clo", "tOut", "tInOp", "subjId"))
+df2$clo
 
 glm.2subj <- glm(clo~poly(tOut,2)*subjId*poly(tInOp,2),family=Gamma, data=df2)
+AIC(glm.2subj)
+
+glm.2subjint <- glm(clo~(poly(tOut,2)+subjId+poly(tInOp,2))^2,family=Gamma, data=df2)
 
 summary(glm.2subj)
+summary(glm.2subjint)
+
+step(glm.2subj, direction = "backward")
+drop1(glm.2subj)
 anova(glm.2subj, test="F")
+png("subjIDModel.png")
+par(mfrow=c(2,2))
 plot(glm.2subj)
+dev.off()
 
 glm.0subj <-glm(clo~(tOut)*subjId*(tInOp),family=Gamma, data=df2)
+AIC(glm.0subj)
 summary(glm.0subj)
 plot(glm.0subj)
 
