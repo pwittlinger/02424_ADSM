@@ -304,3 +304,107 @@ summary(model)
 
 rep(1,length(df3$sex))
 
+
+
+
+###
+# Estimating the variances between the two genders
+
+###############
+# getting specific Genders
+
+data.frame(model.matrix(glm.no))
+summary(glm.no)
+
+y_male <- df1 %>% filter(sex == 'male') #%>% select(logdioxin)
+y_male <- y_male$clo
+y_female <- df1 %>% filter(sex == "female") #%>% select(logdioxin)
+y_female <- y_female$clo
+
+
+design_matrix <- data.frame(model.matrix(glm.2subj))
+X_male <- design_matrix %>% filter(sexmale == 1)
+X_male
+X_female <- design_matrix %>% filter(sexmale == 0)
+X_female
+
+
+
+length(colnames(X_male))
+#optim function
+likelihood.std <- function(params, y_male, X_male, y_female, X_female, theta_male, theta_female){
+  len_betas <- length(colnames(X_male))
+  betas = params[1:len_betas]
+  theta_male <- 1/theta_male
+  theta_female <- 1/theta_female
+  mean_male=data.matrix(X_male)%*%betas
+  neta_male <- 1/mean_male
+  mean_female=data.matrix(X_female)%*%betas
+  neta_female <- 1/mean_female
+  #print(params[len_betas+2])
+  llmale <- sum(dgamma(unlist(y_male), shape = neta_male/theta_male, scale = theta_male, log = TRUE))
+  llfemale <-sum(dgamma(unlist(y_female), shape = neta_female/theta_female, scale = theta_female, log = TRUE))
+  return(-(llmale+llfemale))
+}
+dnorm(c(1,2,1,1), mean = c(0,0,0,0), sd = 1)
+# optimizing it
+params <- rep(0.01, length(glm.no$coefficients)+1)
+#params <- m8_g$coefficients
+params
+
+glm.no$coefficients
+likelihood.std(params, y_male, X_male, y_female, X_female)
+glm.no$coefficients
+summary(glm.no)$dispersion
+coefficients <- coef(glm.no)
+
+# extract the dispersion parameter from the model summary
+dispersion <- summary(glm.no)$dispersion
+
+# concatenate the coefficients and dispersion parameter into an array
+coef_array <- c(coefficients, dispersion)
+coef_array
+likelihood.std(coef_array, y_male, X_male, y_female, X_female)
+lower <- rep(0.001,length(glm.no$coefficients)+1)
+lower[length(glm.no$coefficients)+1]<- 0.001
+lower[length(glm.no$coefficients)+1]<- 0.01
+lower
+max_iter = 5000
+#result_opt <- optim(params, likelihood.std, y_male=y_male, X_male=X_male, y_female=y_female, X_female = X_female, hessian=TRUE)
+result_opt <- optimx(params, likelihood.std, y_male=y_male, X_male=X_male, y_female=y_female, X_female = X_female, hessian=TRUE,  method="L-BFGS-B", lower = lower, control = list(maxit = max_iter))
+warnings()
+result_opt
+null_array <- c()
+null_array
+iter <-0
+params <- rep(0.01, length(glm.no$coefficients))
+lower <- rep(0.001,length(glm.no$coefficients))
+for (theta_male in 1:80) {
+  for (theta_female in 1:80) {
+    result_opt <- optimx(params, likelihood.std, y_male=y_male, X_male=X_male, y_female=y_female, X_female = X_female,
+                         theta_male = theta_male, theta_female=theta_female,
+                         hessian=TRUE,  method="L-BFGS-B", lower = lower)
+    results <- c(theta_male, theta_female, result_opt$value)
+    null_array <- cbind(null_array, list(results))
+    iter<- iter+1
+    print(iter)
+    print(results)
+  }
+}
+profile_df <- data.frame(do.call(rbind,null_array))
+
+profile_df
+colnames(profile_df) <- c('param1', 'param2', 'LogLik')
+library(ggplot2)
+profile_df
+
+filter(profile_df, LogLik == min(LogLik))
+min_vals <- dplyr::select(filter(profile_df, LogLik == min(LogLik)),param1, param2)
+min_vals
+data.frame(profile_df)
+ggplot2::ggplot(profile_df, ggplot2::aes(x = param1, y = param2, z = LogLik)) +
+  ggplot2::geom_contour() +
+  #ggplot2::geom_point(data = min_vals, ggplot2::aes(x = param1, y = param2), size = 3, color = "red") +
+  ggplot2::labs(x = "sigma male", y = "sigma female", z = "Log Likelihood Ratio") +
+  ggplot2::theme_bw()
+
