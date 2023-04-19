@@ -160,7 +160,7 @@ anova(fit_fin, test="Chisq")
 Anova(fit_fin, type="III")
 
 
-pchisq(fit_fin$deviance, fit_fin$df.residual)
+1-pchisq(fit_fin$deviance, fit_fin$df.residual)
 anova(H_0, fit_fin, test="Chisq")
 anova(fit_fin, fit1.offloc, test="Chisq")
 anova(fit1.offset, fit_fin, test="Chisq")
@@ -169,7 +169,7 @@ exp(mean(log(data$infections/data$persons)))
 mean(data$infections/data$persons)
 
 fit_fin$coefficients
-exp(fit_fin$coefficients)
+exp(fit_fin$coefficients)-1
 summary(fit_fin)
 
 #summary(glm.nb(infections ~ offset(log(persons)) + swimmer + location + age + sex, data = data))
